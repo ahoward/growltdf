@@ -41,7 +41,16 @@ Main {
   option('version'){
   }
 
+  option('daemon'){
+    default false
+  }
+
+  option('debug'){
+    default false
+  }
+
   def run
+    daemonize_iff_needed
     setup_growl
 
     loop do
@@ -52,6 +61,53 @@ Main {
       growl_updated_live_entries
       store_updated_live_entires
       wait_a_little_while
+    end
+  end
+
+  def daemonize_iff_needed
+
+    if param['daemon'].given?
+      status = DATA.flock(File::LOCK_EX|File::LOCK_NB)
+      if status == 0
+        r, w = IO.pipe
+
+        if fork
+          w.close
+          buf = r.read.strip
+          begin
+            e = Marshal.load(buf)
+            raise e if Exception===e
+          rescue
+            puts buf.strip
+            exit
+          end
+        else
+          exit! if fork
+          r.close
+          begin
+            w.puts Process.pid
+            Dir.chdir File.expand_path('~')
+            %w[ a+ w+ ].detect do |mode|
+              begin
+                open('.growltdf.log', mode) do |log|
+                  STDOUT.reopen(log)
+                  STDERR.reopen(log)
+                end
+              rescue
+                false
+              end
+            end or abort('could not redirect io')
+            # return
+          rescue Object => e
+            w.write(Marshal.dump(e))
+          ensure
+            w.close
+          end
+        end
+
+      else
+        exit(42)
+      end
     end
   end
 
@@ -66,11 +122,14 @@ Main {
 
     msg = <<-__
 
+      ***********************************************************************
 
       you should see a growl notification now.
       if you do not you need to configure growl as per
 
       http://s3.amazonaws.com/drawohara.com.screenshots/growltdf-prefpane.png
+
+      ***********************************************************************
 
     __
     logger.warn{ msg }
@@ -103,7 +162,10 @@ Main {
         title = li.search('h3').inner_text.strip
         content  = li.search('p').inner_text.strip
         [title, content]
-      end.reverse
+      end
+    @latest_live_entries.sort! do |a,b|
+      a.first <=> b.first
+    end
   end
 
   def get_the_previous_live_entries
@@ -114,7 +176,17 @@ Main {
   end
 
   def compare_them
+    %w[ latest_live_entries previous_live_entries ].each do |listname| 
+      n, i = 4, 0
+      list = instance_variable_get("@#{ listname }")
+      list.last(n).each do |entry|
+        idx = list.size - (n - i)
+        debug{ "#{ listname }[#{ idx }] : #{ entry }" }
+        i += 1
+      end
+    end
     @updated_entries = @latest_live_entries - @previous_live_entries
+    debug{ "#{ @updated_entries.size } updated entries..." }
   end
 
   def growl_updated_live_entries
@@ -173,6 +245,9 @@ Main {
       puts(version)
       exit
     end
+    if param['debug'].given?
+      logger.level = Logger::DEBUG
+    end
   end
 }
 
@@ -210,3 +285,5 @@ BEGIN {
   Home = Pn.new('~').expand_path.realpath
   Db = YAML::Store.new(Home.join('.growltdf.yml').to_s)
 }
+
+__END__
