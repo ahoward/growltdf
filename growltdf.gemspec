@@ -3,7 +3,7 @@
 
 Gem::Specification::new do |spec|
   spec.name = "growltdf"
-  spec.version = "0.4.3"
+  spec.version = "0.4.4"
   spec.platform = Gem::Platform::RUBY
   spec.summary = "growltdf"
 
