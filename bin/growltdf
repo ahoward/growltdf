@@ -1,0 +1,188 @@
+#! /usr/bin/env ruby
+
+#
+# growltdf is the greatest program evar.  it let's you scrape
+# http://cyclingnews.com for TDF updates and dump them into growl to you can
+# keep up with the race while working.
+#
+# . to install this code
+# 
+#     - sudo gem install growltdf
+# 
+# . to run you need to enable your growl prefpane to look like this
+# 
+#     http://s3.amazonaws.com/drawohara.com.screenshots/growltdf-prefpane.png
+# 
+#   if you set a password you'll need to supply to the program when run.
+# 
+# . to run
+# 
+#     without password
+# 
+#       growltdf
+# 
+#     with password
+# 
+#       growltdf --growl-password=password
+# 
+
+Main {
+  option('stage'){
+    argument :required
+    default :latest
+  }
+
+  option('growl-password'){
+    argument :required
+  }
+
+  def run
+    setup_growl
+
+    loop do
+      determine_the_current_stage
+      get_the_latest_live_entries
+      get_the_previous_live_entries
+      compare_them
+      growl_updated_live_entries
+      store_updated_live_entires
+      wait_a_little_while
+    end
+  end
+
+  def setup_growl
+    @growl =
+      Growl.new(
+        'localhost', 'growltdf', %w[ race stage ],
+        default_notifies=nil, params['growl-password'].value
+      )
+  end
+
+  def determine_the_current_stage
+    @stage ||= nil
+    stage = param['stage']
+    if stage.given? and stage.value != :latest
+      @stage = Integer(stage.value)
+    else
+      today = Time.now.utc
+      if today.month == 7
+        stage = today.day - 3
+        if (1..21).include?(stage)
+          if @stage != stage
+            @growl.notify 'stage', "Stage #{ stage }"
+          end
+          @stage = stage
+        end
+      end
+    end
+    abort 'no stage' unless @stage
+  end
+
+  def get_the_latest_live_entries
+    stage_url = stage_url_for(@stage)
+    dom = dom_for(stage_url)
+    live_entries = dom.search('#live_entries')
+    @latest_live_entries = 
+      live_entries.search('li').map do |li|
+        title = li.search('h3').inner_text.strip
+        content  = li.search('p').inner_text.strip
+        [title, content]
+      end.reverse
+  end
+
+  def get_the_previous_live_entries
+    Db.transaction do
+      Db[@stage] ||= []
+      @previous_live_entries = Db[@stage]
+    end
+  end
+
+  def compare_them
+    @updated_entries = @latest_live_entries - @previous_live_entries
+  end
+
+  def growl_updated_live_entries
+    if @previous_live_entries.empty?
+      unless @latest_live_entries.empty?
+        @growl.notify 'stage', "TDF", "Stage #{ @stage } has started."
+      end
+      if @latest_live_entries.size > 10
+        @growl.notify 'race', "TDF", "#{ @latest_live_entries.size - 10 } updates..."
+      end
+    end
+    @updated_entries.last(10).each do |update|
+      title, content, *ignored = Array(update)
+      @growl.notify 'race', title.to_s, content.to_s
+    end
+  end
+
+  def store_updated_live_entires
+    Db.transaction do
+      Db[@stage] = @latest_live_entries
+    end
+  end
+
+  def wait_a_little_while
+    sleep 3 
+  end
+
+  def stage_url_for(stage)
+    "http://www.cyclingnews.com/races/96th-tour-de-france-gt/stages/stage-#{ stage }/live-report"
+  end
+
+  def get(url)
+    open(url){|socket| socket.read}
+  rescue Exception
+    nil
+  end
+
+  def dom_for(url)
+    html = get(url)
+    return nil unless html
+    Nokogiri::HTML(html)
+  rescue Exception
+    nil
+  end
+
+  def head(url)
+    uri = URI.parse(url.to_s)
+    Net::HTTP.start(uri.host, uri.port){|http| http.head(uri.path)}
+  rescue
+    return false
+  end
+}
+
+BEGIN {
+  require 'pathname'
+  Pn = Pathname
+
+  require 'fileutils'
+  Fu = FileUtils
+
+  require 'uri'
+  require 'net/http'
+  require 'open-uri'
+
+  require 'yaml'
+  require 'yaml/store'
+
+  require 'rubygems'
+  begin
+    require 'main'
+  rescue LoadError
+    abort "sudo gem intall main"
+  end
+  begin
+    require 'ruby-growl'
+  rescue LoadError
+    abort "sudo gem intall ruby-growl"
+  end
+  begin
+    require 'nokogiri'
+  rescue LoadError
+    abort "sudo gem intall nokogiri"
+  end
+
+  Home = Pn.new('~').expand_path.realpath
+  Db = YAML::Store.new(Home.join('.growltdf.yml').to_s)
+}
