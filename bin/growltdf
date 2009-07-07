@@ -1,32 +1,34 @@
 #! /usr/bin/env ruby
 
-#
-# growltdf is the greatest program evar.  it let's you scrape
-# http://cyclingnews.com for TDF updates and dump them into growl to you can
-# keep up with the race while working.
-#
-# . to install this code
-# 
-#     - sudo gem install growltdf
-# 
-# . to run you need to enable your growl prefpane to look like this
-# 
-#     http://s3.amazonaws.com/drawohara.com.screenshots/growltdf-prefpane.png
-# 
-#   if you set a password you'll need to supply to the program when run.
-# 
-# . to run
-# 
-#     without password
-# 
-#       growltdf
-# 
-#     with password
-# 
-#       growltdf --growl-password=password
-# 
-
 Main {
+  description <<-__
+    growltdf is the greatest program evar.  it let's you scrape
+    http://cyclingnews.com for TDF updates and dump them into growl to you can
+    keep up with the race while working.
+
+    . to install this code
+
+       - sudo gem install growltdf
+
+    . to run you need to enable your growl prefpane to look like this
+
+       http://s3.amazonaws.com/drawohara.com.screenshots/growltdf-prefpane.png
+
+     if you set a password you'll need to supply to the program when run.
+
+    . to run
+
+       without password
+
+         growltdf
+
+       with password
+
+         growltdf --growl-password=password
+  __
+
+  version '0.4.3'
+
   option('stage'){
     argument :required
     default :latest
@@ -34,6 +36,9 @@ Main {
 
   option('growl-password'){
     argument :required
+  }
+
+  option('version'){
   }
 
   def run
@@ -53,9 +58,18 @@ Main {
   def setup_growl
     @growl =
       Growl.new(
-        'localhost', 'growltdf', %w[ race stage ],
+        'localhost', 'growltdf', %w[ initialize race stage ],
         default_notifies=nil, params['growl-password'].value
       )
+
+    @growl.notify 'initialize', 'growltdf', 'starting...'
+
+    puts <<-__
+      you should see a growl notification now.
+      if you do not you need to configure growl as per
+
+      http://s3.amazonaws.com/drawohara.com.screenshots/growltdf-prefpane.png
+    __
   end
 
   def determine_the_current_stage
@@ -68,9 +82,6 @@ Main {
       if today.month == 7
         stage = today.day - 3
         if (1..21).include?(stage)
-          if @stage != stage
-            @growl.notify 'stage', "Stage #{ stage }"
-          end
           @stage = stage
         end
       end
@@ -149,6 +160,13 @@ Main {
     Net::HTTP.start(uri.host, uri.port){|http| http.head(uri.path)}
   rescue
     return false
+  end
+
+  def before_run
+    if param['version'].given?
+      puts(version)
+      exit
+    end
   end
 }
 

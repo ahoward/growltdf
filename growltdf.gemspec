@@ -3,11 +3,11 @@
 
 Gem::Specification::new do |spec|
   spec.name = "growltdf"
-  spec.version = "0.4.2"
+  spec.version = "0.4.3"
   spec.platform = Gem::Platform::RUBY
   spec.summary = "growltdf"
 
-  spec.files = ["bin", "bin/growltdf", "growltdf.gemspec", "Rakefile"]
+  spec.files = ["bin", "bin/growltdf", "growltdf.gemspec", "Rakefile", "README"]
   spec.executables = ["growltdf"]
   
   spec.require_path = "lib"

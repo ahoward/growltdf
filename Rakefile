@@ -184,11 +184,9 @@ BEGIN {
   end
   This.lib = lib
 
-  version = ENV['VERSION'] || '0.4.2'
+  version = ENV['VERSION']
   unless version
-    name = lib.capitalize
-    require "./lib/#{ lib }"
-    version = eval(name).send(:version)
+    version = `./bin/growltdf --version`.strip
   end
   This.version = version
 

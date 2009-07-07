@@ -1,0 +1,37 @@
+NAME
+  growltdf v0.4.2
+
+SYNOPSIS
+  growltdf [options]+
+
+DESCRIPTION
+  growltdf is the greatest program evar.  it let's you scrape
+  http://cyclingnews.com for TDF updates and dump them into growl to you can
+  keep up with the race while working.
+  
+  . to install this code
+  
+     - sudo gem install growltdf
+  
+  . to run you need to enable your growl prefpane to look like this
+  
+     http://s3.amazonaws.com/drawohara.com.screenshots/growltdf-prefpane.png
+  
+   if you set a password you'll need to supply to the program when run.
+  
+  . to run
+  
+     without password
+  
+       growltdf
+  
+     with password
+  
+       growltdf --growl-password=password
+
+PARAMETERS
+  --stage=stage (0 ~> stage=latest) 
+  --growl-password=growl-password (0 ~> growl-password) 
+  --version 
+  --help, -h 
+
