@@ -27,7 +27,7 @@ Main {
          growltdf --growl-password=password
   __
 
-  version '0.4.3'
+  version '0.4.4'
 
   option('stage'){
     argument :required
@@ -91,6 +91,7 @@ Main {
 
   def get_the_latest_live_entries
     stage_url = stage_url_for(@stage)
+    puts "checking #{ stage_url } for updates..."
     dom = dom_for(stage_url)
     live_entries = dom.search('#live_entries')
     @latest_live_entries = 
@@ -134,7 +135,7 @@ Main {
   end
 
   def wait_a_little_while
-    sleep 3 
+    sleep 30
   end
 
   def stage_url_for(stage)
