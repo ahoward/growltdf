@@ -27,7 +27,7 @@ Main {
          growltdf --growl-password=password
   __
 
-  version '0.4.4'
+  version '0.4.5'
 
   option('stage'){
     argument :required
@@ -64,12 +64,16 @@ Main {
 
     @growl.notify 'initialize', 'growltdf', 'starting...'
 
-    puts <<-__
+    msg = <<-__
+
+
       you should see a growl notification now.
       if you do not you need to configure growl as per
 
       http://s3.amazonaws.com/drawohara.com.screenshots/growltdf-prefpane.png
+
     __
+    logger.warn{ msg }
   end
 
   def determine_the_current_stage
@@ -91,7 +95,7 @@ Main {
 
   def get_the_latest_live_entries
     stage_url = stage_url_for(@stage)
-    puts "checking #{ stage_url } for updates..."
+    logger.info{ "checking #{ stage_url } for updates..." }
     dom = dom_for(stage_url)
     live_entries = dom.search('#live_entries')
     @latest_live_entries = 
@@ -135,6 +139,7 @@ Main {
   end
 
   def wait_a_little_while
+    logger.info{ 'sleeping for 30s...' }
     sleep 30
   end
 
