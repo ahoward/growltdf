@@ -176,17 +176,25 @@ Main {
   end
 
   def compare_them
-    %w[ latest_live_entries previous_live_entries ].each do |listname| 
-      n, i = 4, 0
+    @updated_entries = @latest_live_entries.dup
+
+    @previous_live_entries.each do |key, val|
+      @updated_entries.delete_if do |k,v|
+        key == k and
+        val.gsub(%r/\s/,'') == v.gsub(%r/\s/,'')
+      end
+    end
+
+    %w[ latest_live_entries previous_live_entries updated_entries ].each do |listname| 
       list = instance_variable_get("@#{ listname }")
+      i = 0
+      n = [4, list.size].min
       list.last(n).each do |entry|
         idx = list.size - (n - i)
         debug{ "#{ listname }[#{ idx }] : #{ entry }" }
         i += 1
       end
     end
-    @updated_entries = @latest_live_entries - @previous_live_entries
-    debug{ "#{ @updated_entries.size } updated entries..." }
   end
 
   def growl_updated_live_entries
@@ -212,7 +220,7 @@ Main {
 
   def wait_a_little_while
     logger.info{ 'sleeping for 30s...' }
-    sleep 30
+    sleep 15
   end
 
   def stage_url_for(stage)
